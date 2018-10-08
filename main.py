@@ -2,13 +2,16 @@ import glfw
 from OpenGL.GL import *
 import numpy as np
 
+
+
 # Global variable
-gComposedM = np.identity(2)
+gComposedM = np.identity(3)
 
 
 def render(T):
 	glClear(GL_COLOR_BUFFER_BIT)
 	glLoadIdentity()
+
 	# draw cooridnate
 	glBegin(GL_LINES)
 	glColor3ub(255, 0, 0)
@@ -18,12 +21,13 @@ def render(T):
 	glVertex2fv(np.array([0., 0.]))
 	glVertex2fv(np.array([0., 1.]))
 	glEnd()
+
 	# draw triangle
 	glBegin(GL_TRIANGLES)
 	glColor3ub(255, 255, 255)
-	glVertex2fv(T @ np.array([0.0, 0.5]))
-	glVertex2fv(T @ np.array([0.0, 0.0]))
-	glVertex2fv(T @ np.array([0.5, 0.0]))
+	glVertex2fv((T @ np.array([0.0, 0.5, 1.]))[:-1])
+	glVertex2fv((T @ np.array([0.0, 0.0, 1.]))[:-1])
+	glVertex2fv((T @ np.array([0.5, 0.0, 1.]))[:-1])
 	glEnd()
 
 
@@ -31,33 +35,24 @@ def key_callback(window, key, scancode, action, mods):
 	if action != glfw.PRESS: return
 
 	global gComposedM
-	newM = np.identity(2)
+	newM = np.identity(3)
 
-	if key == glfw.KEY_W:  # Scale by 0.9 times in x direction
-		newM = np.array([[0.9, 0], [0, 1]])
+	if key == glfw.KEY_Q:  # Translate by -0.1 in x direction w.r.t. global coordinate
+		newM = np.array([[1, 0, -0.1], [0, 1, 0], [0, 0, 1]])
 
-	elif key == glfw.KEY_E:  # Scale by 1.1 times in x direction
-		newM = np.array([[1.1, 0], [0, 1]])
+	elif key == glfw.KEY_E:  # Translate by 0.1 in x direction w.r.t. global coordinate
+		newM = np.array([[1, 0, 0.1], [0, 1, 0], [0, 0, 1]])
 
-	elif key == glfw.KEY_S:  # Rotate by 10 degrees counterclockwise
+	elif key == glfw.KEY_A:  # Rotate by 10 degrees counterclockwise w.r.t global coordinate
 		th = np.radians(10)
 		newM = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
 
-	elif key == glfw.KEY_D:  # Rotate by 10 degress clockwise
+	elif key == glfw.KEY_D:  # Rotate by 10 degrees clockwise w.r.t global coordinate
 		th = np.radians(-10)
 		newM = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
 
-	elif key == glfw.KEY_X:  # Shear by a factor of -0.1 in x direction
-		newM = np.array([[1, -0.1], [0, 1]])
-
-	elif key == glfw.KEY_C:  # Shear by a factor of 0.1 in x direction
-		newM = np.array([[1, 0.1], [0, 1]])
-
-	elif key == glfw.KEY_R:  # Reflection across x axis
-		newM = np.array([[1, 0], [0, -1]])
-
 	elif key == glfw.KEY_1:  # Reset the triangle with identity matrix
-		gComposedM = np.identity(2)
+		gComposedM = np.identity(3)
 
 	else:
 		return
