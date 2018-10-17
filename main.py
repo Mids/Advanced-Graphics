@@ -1,46 +1,58 @@
-# 2017124921 JungJin Park Assignment 4
+# 2017124921 JungJin Park Assignment 5
+
 import glfw
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import numpy as np
 
-# Global variable
 gCamAng = 0.
+gCamHeight = 1.
 
 
-def myLookAt(eye, at, up):  # eye, at, up are 1D numpy array of length 3
-    global gCamAng
-    forward = eye - at
-    forward = forward/np.sqrt(np.dot(forward, forward))
+def createVertexAndIndexArrayIndexed():
+    varr = np.array([
+        (0, 0, 0),  # v0
+        (1.5, 0, 0),  # v1
+        (0, 1.5, 0),  # v2
+        (0, 0, 1.5),  # v3
+    ], 'float32')
 
-    side = np.cross(up, forward)
-    side = side/np.sqrt(np.dot(side, side))
+    iarr = np.array([
+        (0, 2, 1),
+        (0, 3, 2),
+        (0, 1, 3),
+        (1, 2, 3),
+    ])
 
-    up = np.cross(forward, side)
-
-    pos = np.array([-np.dot(eye, side), -np.dot(eye, up), -np.dot(eye, forward)])
-
-    viewMatrix = np.array([[side[0], up[0], forward[0], 0.0],
-                          [side[1], up[1], forward[1], 0.0],
-                          [side[2], up[2], forward[2], 0.0],
-                          [pos[0], pos[1], pos[2], 1.0]])
-
-    glMultMatrixf(viewMatrix)
+    return varr, iarr
 
 
-def render(camAng):
+def drawCube_glDrawArrays():
+    global gVertexArrayIndexed, gIndexArray
+    varr = gVertexArrayIndexed
+    iarr = gIndexArray
+    glEnableClientState(GL_VERTEX_ARRAY)  # Enable it to use vertex array
+    glVertexPointer(3, GL_FLOAT, 3 * varr.itemsize, varr)
+    glDrawElements(GL_TRIANGLES, iarr.size, GL_UNSIGNED_INT, iarr)
+
+
+def render():
+    global gCamAng, gCamHeight
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     glEnable(GL_DEPTH_TEST)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
 
     glLoadIdentity()
-    glOrtho(-1, 1, -1, 1, -10, 10)
+    gluPerspective(45, 1, 1, 10)
+    gluLookAt(5 * np.sin(gCamAng), gCamHeight, 5 * np.cos(gCamAng), 0, 0, 0, 0, 1, 0)
 
-    # rotate "camera" position (right-multiply the current matrix by viewing matrix)
-    # try to change parameters
-    # gluLookAt(1 * np.sin(camAng), 1, 1 * np.cos(camAng), 0, 0, 0, 0, 1, 0)
-    myLookAt(np.array([1 * np.sin(camAng), 1, 1 * np.cos(camAng)]), np.array([0, 0, 0]), np.array([0, 1, 0]))
+    drawFrame()
+    glColor3ub(255, 255, 255)
+    # drawCube_glVertex()
+    drawCube_glDrawArrays()
 
-    # draw coordinates
+
+def drawFrame():
     glBegin(GL_LINES)
     glColor3ub(255, 0, 0)
     glVertex3fv(np.array([0., 0., 0.]))
@@ -55,28 +67,39 @@ def render(camAng):
 
 
 def key_callback(window, key, scancode, action, mods):
-    global gCamAng
-    # rotate the camera when 1 or 3 key is pressed or repeated
+    global gCamAng, gCamHeight
     if action == glfw.PRESS or action == glfw.REPEAT:
         if key == glfw.KEY_1:
             gCamAng += np.radians(-10)
         elif key == glfw.KEY_3:
             gCamAng += np.radians(10)
+        elif key == glfw.KEY_2:
+            gCamHeight += .1
+        elif key == glfw.KEY_W:
+            gCamHeight += -.1
+
+
+gVertexArrayIndexed = None
+gIndexArray = None
 
 
 def main():
+    global gVertexArrayIndexed, gIndexArray
+
     if not glfw.init():
         return
-    window = glfw.create_window(640, 640, 'Lecture7', None, None)
+    window = glfw.create_window(640, 640, '2017124921 JungJin Park Assignment 5', None, None)
     if not window:
         glfw.terminate()
         return
     glfw.make_context_current(window)
     glfw.set_key_callback(window, key_callback)
 
+    gVertexArrayIndexed, gIndexArray = createVertexAndIndexArrayIndexed()
+
     while not glfw.window_should_close(window):
         glfw.poll_events()
-        render(gCamAng)
+        render()
         glfw.swap_buffers(window)
 
     glfw.terminate()
