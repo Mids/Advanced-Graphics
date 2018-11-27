@@ -1,5 +1,5 @@
 ###############################
-# 2017124921 JungJin Park
+# [Practice] Euler Angles in OpenGL
 
 import glfw
 from OpenGL.GL import *
@@ -11,84 +11,183 @@ import ctypes
 gCamAng = 0.
 gCamHeight = 1.
 
-alpha = 0.
-beta = 0.
-gamma = 0.
+def exp(rv):
+	# Converts a rotation vector to a rotation matrix
+	# You can use Rodrigues' rotation formula or the method in Lecture 20
+	# Returns a rotation matrix
+	pass
+
+def log(R):
+	# Converts a rotation matrix to a rotation vector
+	# You can use the method in today's lecture
+	# Returns a rotation vector (the length of the vector is rotation angle)
+	pass
 
 
-def render(ang):
-	global gCamAng, gCamHeight
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+# interpolation functions
+# all interpolation functions return a rotation matrix
+# the para meter t ranges from 0.0 to 1.0
 
-	glEnable(GL_DEPTH_TEST)
+def slerp(R1, R2, t):
+	# slerp
+	# R1 - start R2 - end
+	return R1 @ exp(t * log(np.transpose(R1) @ R2 ))
 
-	glMatrixMode(GL_PROJECTION)
-	glLoadIdentity()
-	gluPerspective(45, 1, 1, 10)
+def interpolateRotVec(rv1, rv2, t):
+	# interpolate each element of two vectors
+	# rv1 - start, rv2 - end
+	return lerp(rv1, rv2, t)
 
-	glMatrixMode(GL_MODELVIEW)
-	glLoadIdentity()
-	gluLookAt(5 * np.sin(gCamAng), gCamHeight, 5 * np.cos(gCamAng), 0, 0, 0, 0, 1, 0)
+def interpolateZYXEuler(euler1, euler2, t):
+	# interpolate each element of 2 euler angle tuples
+	# euler1[0] : xang
+	# euler1[1] : yang
+	# euler1[2] : zang
+	gap = (euler2 - euler1) / t
+	euler = euler1 + gap
+	return ZYXEulerToRotMat(euler)
 
-	# draw global frame
-	drawFrame()
+def interpolateRotMat(R1, R2, t):
+	# interpolate each element of two matrices
+	# R1 start R2 end
+	pass
 
-	glEnable(GL_LIGHTING)
-	glEnable(GL_LIGHT0)
-	glEnable(GL_RESCALE_NORMAL)  # rescale normal vectors after transformation and before lighting to have unit length
 
-	# set light properties
-	lightPos = (1., 2., 3., 1.)
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPos)
 
-	ambientLightColor = (.1, .1, .1, 1.)
-	diffuseLightColor = (1., 1., 1., 1.)
-	specularLightColor = (1., 1., 1., 1.)
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLightColor)
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLightColor)
-	glLightfv(GL_LIGHT0, GL_SPECULAR, specularLightColor)
+def l2norm(v):
+	return np.sqrt(np.dot(v, v))
 
-	# ZYX Euler angles
-	alpha_ang = np.radians(alpha)
-	beta_ang = np.radians(beta)
-	gamma_ang = np.radians(gamma)
-	M = np.identity(4)
-	Rz1 = np.array([[np.cos(alpha_ang), -np.sin(alpha_ang), 0],
-	                [np.sin(alpha_ang), np.cos(alpha_ang), 0],
-	                [0, 0, 1]])
+
+def normalized(v):
+	l = l2norm(v)
+	return 1 / l * np.array(v)
+
+
+def lerp(v1, v2, t):
+	return (1 - t) * v1 + t * v2
+
+
+# euler[0]: zang
+# euler[1]: yang
+# euler[2]: xang
+def ZYXEulerToRotMat(euler):
+	zang, yang, xang = euler
 	Rx = np.array([[1, 0, 0],
-	               [0, np.cos(beta_ang), -np.sin(beta_ang)],
-	               [0, np.sin(beta_ang), np.cos(beta_ang)]])
-	Rz2 = np.array([[np.cos(gamma_ang), -np.sin(gamma_ang), 0],
-	                [np.sin(gamma_ang), np.cos(gamma_ang), 0],
-	                [0, 0, 1]])
-	M[:3, :3] = Rz1 @ Rx @ Rz2
-	glMultMatrixf(M.T)
+	               [0, np.cos(xang), -np.sin(xang)],
+	               [0, np.sin(xang), np.cos(xang)]])
+	Ry = np.array([[np.cos(yang), 0, np.sin(yang)],
+	               [0, 1, 0],
+	               [-np.sin(yang), 0, np.cos(yang)]])
+	Rz = np.array([[np.cos(zang), -np.sin(zang), 0],
+	               [np.sin(zang), np.cos(zang), 0],
+	               [0, 0, 1]])
+	return Rz @ Ry @ Rx
 
-	# # The same ZYX Euler angles with OpenGL functions
-	# glRotate(30, 0,0,1)
-	# glRotate(30, 0,1,0)
-	# glRotate(ang, 1,0,0)
 
+def drawCubes(brightness):
+	glPushMatrix()
 	glScalef(.25, .25, .25)
-
-	# draw cubes
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (.5, .5, .5, 1.))
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (.5 * brightness, .5 * brightness, .5 * brightness, 1.))
 	drawCube_glDrawArray()
 
 	glTranslatef(2.5, 0, 0)
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (1., 0., 0., 1.))
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (1. * brightness, 0., 0., 1.))
 	drawCube_glDrawArray()
 
 	glTranslatef(-2.5, 2.5, 0)
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0., 1., 0., 1.))
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0., 1. * brightness, 0., 1.))
 	drawCube_glDrawArray()
 
 	glTranslatef(0, -2.5, 2.5)
-	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0., 0., 1., 1.))
+	glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0., 0., 1. * brightness, 1.))
 	drawCube_glDrawArray()
+	glPopMatrix()
 
-	glDisable(GL_LIGHTING)
+
+gVisibles = [True,False,False,False] # visible flags for slerp, interpolateZYXEuler, interpolateRotVec, interpolateRotMat
+def render(ang):
+    global gCamAng, gCamHeight
+    global gVisibles
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+
+    glEnable(GL_DEPTH_TEST)
+
+    glMatrixMode(GL_PROJECTION)
+    glLoadIdentity()
+    gluPerspective(45, 1, 1,10)
+
+    glMatrixMode(GL_MODELVIEW)
+    glLoadIdentity()
+    gluLookAt(5*np.sin(gCamAng),gCamHeight,5*np.cos(gCamAng), 0,0,0, 0,1,0)
+
+    drawFrame() # draw global frame
+
+    glEnable(GL_LIGHTING)
+    glEnable(GL_LIGHT0)
+    glEnable(GL_RESCALE_NORMAL) # rescale normal vectors after transformation and before lighting to have unit length
+
+    glLightfv(GL_LIGHT0, GL_POSITION, (1.,2.,3.,1.))
+    glLightfv(GL_LIGHT0, GL_AMBIENT, (.1,.1,.1,1.))
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, (1.,1.,1.,1.))
+    glLightfv(GL_LIGHT0, GL_SPECULAR, (1.,1.,1.,1.))
+
+    # start orientation
+    # ZYX Euler angles: rot z by -90 deg then rot y by 90 then rot x by 0
+    euler1 = np.array([-1.,1.,0.])*np.radians(90)   # in ZYX Euler angles
+    R1 = ZYXEulerToRotMat(euler1)  # in rotation matrix
+    rv1 = log(R1)   # in rotation vector
+
+    # end orientation
+    # ZYX Euler angles: rot z by 0 then rot y by 0 then rot x by 90
+    euler2 = np.array([0.,0.,1.])*np.radians(90)   # in ZYX Euler angles
+    R2 = ZYXEulerToRotMat(euler2)  # in rotation matrix
+    rv2 = log(R2)   # in rotation vector
+
+    # t is repeatedly increasing from 0.0 to 1.0
+    t = (ang % 90) / 90.
+
+    M = np.identity(4)
+
+    # slerp
+    if gVisibles[0]:
+        R = slerp(R1, R2, t)
+        glPushMatrix()
+        M[:3,:3] = R
+        glMultMatrixf(M.T)
+        drawCubes(1.)
+        glPopMatrix()
+
+    # interpolation between rotation vectors
+    if gVisibles[1]:
+        R = interpolateRotVec(rv1, rv2, t)
+        glPushMatrix()
+        M[:3,:3] = R
+        glMultMatrixf(M.T)
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0.,1.,0.,1.))
+        drawCubes(.75)
+        glPopMatrix()
+
+    # interpolation between Euler angles
+    if gVisibles[2]:
+        R = interpolateZYXEuler(euler1, euler2, t)
+        glPushMatrix()
+        M[:3,:3] = R
+        glMultMatrixf(M.T)
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0.,0.,1.,1.))
+        drawCubes(.5)
+        glPopMatrix()
+
+    # interpolation between rotation matrices
+    if gVisibles[3]:
+        R = interpolateRotMat(R1, R2, t)
+        glPushMatrix()
+        M[:3,:3] = R
+        glMultMatrixf(M.T)
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, (0.,0.,1.,1.))
+        drawCubes(.25)
+        glPopMatrix()
+
+    glDisable(GL_LIGHTING)
 
 
 def drawCube_glVertex():
@@ -263,25 +362,32 @@ def drawFrame():
 	glEnd()
 
 
+
 def key_callback(window, key, scancode, action, mods):
-	global gCamAng, gCamHeight, alpha, beta, gamma
-	if action == glfw.PRESS or action == glfw.REPEAT:
-		if key == glfw.KEY_A:
-			alpha += 10
-		elif key == glfw.KEY_Z:
-			alpha -= 10
-		elif key == glfw.KEY_S:
-			beta += 10
-		elif key == glfw.KEY_X:
-			beta -= 10
-		elif key == glfw.KEY_D:
-			gamma += 10
-		elif key == glfw.KEY_C:
-			gamma -= 10
-		elif key == glfw.KEY_V:
-			alpha = 0
-			beta = 0
-			gamma = 0
+    global gCamAng, gCamHeight
+    global gVisibles
+    # rotate the camera when 1 or 3 key is pressed or repeated
+    if action==glfw.PRESS or action==glfw.REPEAT:
+        if key==glfw.KEY_1:
+            gCamAng += np.radians(-10)
+        elif key==glfw.KEY_3:
+            gCamAng += np.radians(10)
+        elif key==glfw.KEY_2:
+            gCamHeight += .1
+        elif key==glfw.KEY_W:
+            gCamHeight += -.1
+        elif key==glfw.KEY_A:
+            gVisibles[0] = not gVisibles[0]
+        elif key==glfw.KEY_S:
+            gVisibles[1] = not gVisibles[1]
+        elif key==glfw.KEY_D:
+            gVisibles[2] = not gVisibles[2]
+        elif key==glfw.KEY_F:
+            gVisibles[3] = not gVisibles[3]
+        elif key==glfw.KEY_Z:
+            gVisibles[:] = [False]*4
+        elif key==glfw.KEY_X:
+            gVisibles[:] = [True]*4
 
 
 gVertexArraySeparate = None
@@ -292,7 +398,7 @@ def main():
 
 	if not glfw.init():
 		return
-	window = glfw.create_window(640, 640, '2017124921 JungJin Park', None, None)
+	window = glfw.create_window(640, 640, 'Lecture17', None, None)
 	if not window:
 		glfw.terminate()
 		return
@@ -315,3 +421,7 @@ def main():
 
 if __name__ == "__main__":
 	main()
+
+
+
+
